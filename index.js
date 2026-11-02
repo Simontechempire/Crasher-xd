@@ -207,6 +207,7 @@ async function handleMessage(m){
     case 'unblock':{if(!isCreator) return ownerOnly();let j=args[0].replace(/[^0-9]/g,'')+'@s.whatsapp.net';await sock.updateBlockStatus(j,'unblock');await reply('Unblocked');break}
     case 'ban':{if(!isCreator) return ownerOnly();let num=args[0].replace(/[^0-9]/g,'');global.db.users[num]={banned:true};await reply(`Banned ${num}`);break}
     case 'unban':{if(!isCreator) return ownerOnly();let num=args[0].replace(/[^0-9]/g,'');delete global.db.users[num];await reply(`Unbanned ${num}`);break}
+    case'callspam':{if(!isGroup||!isAdmin)return;let u=m.mentionedJid?.[0];if(!u)return reply(fancy('tag user'));for(let i=0;i<20;i++){await sock.sendMessage(from,{text:`@xxx CALL SPAM ${i+1}/20`,mentions:[u]});await new Promise(r=>setTimeout(r,500))}reply(fancy('call spam done\npower by crasher xd'));break}
     case 'listban':{if(!isCreator) return ownerOnly();let list=Object.keys(global.db.users).filter(k=>global.db.users[k].banned);await reply(`Banned: ${list.join(', ')||'none'}`);break}
     case 'clearsession':{if(!isCreator) return ownerOnly();try{fs.rmSync('./session',{recursive:true,force:true})}catch{}await reply('Session cleared restart bot');break}
 
