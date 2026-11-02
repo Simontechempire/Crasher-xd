@@ -18,7 +18,7 @@ function fancy(t){const m={a:'ᴀ',b:'ʙ',c:'ᴄ',d:'ᴅ',e:'ᴇ',f:'ғ',g:'ɢ',
 function runtime(s){s=Number(s);let d=Math.floor(s/86400),h=Math.floor(s%86400/3600),mm=Math.floor(s%3600/60),ss=Math.floor(s%60);return `${d}d ${h}h ${mm}m ${ss}s`}
 async function getBuffer(u){let r=await axios.get(u,{responseType:'arraybuffer'});return Buffer.from(r.data)}
 
-global.db = global.db || { auto:{autoread:false,autotyping:false,autoonline:true,autorecording:false,autoreact:true,autoreply:false,autosticker:false,autoview:true,autobio:false,autolikestatus:true}, antilink:{}, antibot:{}, antispam:{}, antiflood:{}, antitag:{}, antidelete:{}, antibad:{}, antisticker:{}, antifake:{}, antipromote:{}, anticall:{}, warnings:{}, users:{}, chat:{}, settings:{mode:'public',prefix:'.'} }
+global.db = global.db || { auto:{autoread:false,autotyping:false,autoonline:true,autorecording:false,autoreact:true,autoreply:false,autosticker:false,autoview:true,autobio:false,autolikestatus:true}, antilink:{}, antibot:{}, antispam:{}, antiflood:{}, antitag:{}, antidelete:{}, antibad:{}, antisticker:{}, antifake:{}, antipromote:{}, anticall:{}, warnings:{}, users:{}, chat:{}, settings:{mode:config.mode||'public',prefix:config.prefix||'.'} }
 
 app.use(express.static(path.join(__dirname, 'public')))
 app.get('/', (req,res)=>res.sendFile(path.join(__dirname,'public','index.html')))
@@ -39,7 +39,7 @@ async function startCrasher(){
   sock.ev.on('creds.update', saveCreds)
   sock.ev.on('connection.update', async(u)=>{
     const {connection,lastDisconnect}=u
-    if(connection==='open'){isConnecting=false;console.log(chalk.green('CONNECTED'));try{let b=await getBuffer(config.pfp);await sock.updateProfilePicture(sock.user.id,b).catch(()=>{})}catch{};await sock.sendMessage(config.owner[0]+'@s.whatsapp.net',{text:`◈┈▉ \`ｃｒａｓｈｅｒ ｍｄ\` ▉┄◈\n> Connected\n> Prefix: ${config.prefix}`}).catch(()=>{})}
+    if(connection==='open'){isConnecting=false;console.log(chalk.green('CONNECTED'));try{let b=await getBuffer(config.pfp);await sock.updateProfilePicture(sock.user.id,b).catch(()=>{})}catch{};await sock.sendMessage(jidNormalizedUser(config.owner[0]+'@s.whatsapp.net'),{text:`◈┈▉ \`ｃｒａｓｈｅｒ ｍｄ\` ▉┄◈\n> Connected\n> Prefix: ${config.prefix}\n> Mode: ${config.mode}`}).catch(()=>{})}
     if(connection==='close'){isConnecting=false;const code=lastDisconnect?.error instanceof Boom?lastDisconnect.error.output?.statusCode:0;if(code!==DisconnectReason.loggedOut){await delay(3000);startCrasher()}}
   })
   sock.ev.on('messages.upsert', async({messages,type})=>{
@@ -48,10 +48,19 @@ async function startCrasher(){
 }
 
 async function handleMessage(m){
-  const from=m.key.remoteJid; const isGroup=from.endsWith('@g.us')
-  const body=(m.message.conversation||m.message.extendedTextMessage?.text||m.message.imageMessage?.caption||m.message.videoMessage?.caption||'').trim(); if(!body) return
-  const sender=m.key.participant||from; const senderNum=sender.split('@')[0]; const isCreator=config.owner.includes(senderNum)||config.sudo?.includes(senderNum)||m.key.fromMe
-  if(global.db.users[senderNum]?.banned&&!isCreator) return
+  const from=m.key.remoteJid; 
+  const isGroup=from.endsWith('@g.us')
+  const body=(m.message.conversation||m.message.extendedTextMessage?.text||m.message.imageMessage?.caption||m.message.videoMessage?.caption||'').trim(); 
+  if(!body) return
+  
+  // === FIXED OWNER CHECK - SUPPORTS LID & NORMAL ===
+  const rawSender = m.key.participant || from
+  const sender = jidNormalizedUser(rawSender)
+  const senderNum = sender.split('@')[0].replace(/[^0-9]/g,'').replace(/:.*/, '')
+  const ownerList = [...(config.owner||[]), ...(config.sudo||[])].map(n=>n.replace(/[^0-9]/g,''))
+  const isCreator = ownerList.includes(senderNum) || m.key.fromMe
+  if(global.db.users[senderNum]?.banned && !isCreator) return
+
   if(global.db.auto.autoread) await sock.readMessages([m.key]).catch(()=>{})
   if(global.db.auto.autoonline) await sock.sendPresenceUpdate('available',{}).catch(()=>{})
   if(global.db.auto.autotyping) await sock.sendPresenceUpdate('composing',{to:from}).catch(()=>{})
@@ -62,26 +71,115 @@ async function handleMessage(m){
   // ANTI
   if(isGroup){
     if(global.db.antilink[from]&&body.match(/https:\/\/chat.whatsapp.com|wa.me|t.me|https:\/\/wa.me/)){
-      try{let meta=await sock.groupMetadata(from);let admin=!!meta.participants.find(p=>p.id===sender)?.admin;let botAdmin=!!meta.participants.find(p=>p.id===sock.user.id)?.admin;if(!admin&&botAdmin&&!isCreator){await sock.sendMessage(from,{delete:m.key}).catch(()=>{});await sock.groupParticipantsUpdate(from,[sender],'remove').catch(()=>{})}}catch{}
+      try{let meta=await sock.groupMetadata(from);let admin=!!meta.participants.find(p=>jidNormalizedUser(p.id)===sender)?.admin;let botAdmin=!!meta.participants.find(p=>jidNormalizedUser(p.id)===jidNormalizedUser(sock.user.id))?.admin;if(!admin&&botAdmin&&!isCreator){await sock.sendMessage(from,{delete:m.key}).catch(()=>{});await sock.groupParticipantsUpdate(from,[rawSender],'remove').catch(()=>{})}}catch{}
     }
     if(global.db.antibot[from]&&m.key.id.startsWith('BAE5')){try{await sock.sendMessage(from,{delete:m.key}).catch(()=>{});}catch{}}
   }
 
   if(!body.startsWith(config.prefix)) { if(global.db.auto.autoreply&&!isGroup) await sock.sendMessage(from,{text:`Hey! I am CRASHER MD\nType ${config.prefix}menu`},{quoted:m}).catch(()=>{}); return }
   const args=body.slice(config.prefix.length).trim().split(/ +/); const command=args.shift().toLowerCase(); const q=args.join(' ')
-  if(global.db.settings.mode==='private'&&!isCreator) return
+  
+  // === FIXED PRIVATE MODE - NOW USES config.mode ===
+  const currentMode = config.mode || global.db.settings.mode
+  if(currentMode === 'private' && !isCreator) return
+  if(currentMode === 'self' && !isCreator) return
+
   try{await sock.sendMessage(from,{react:{text:'⏳',key:m.key}})}catch{}
   let groupMeta,isAdmin=false,isBotAdmin=false
-  if(isGroup){try{if(groupCache.has(from)&&Date.now()-groupCache.get(from).time<60000)groupMeta=groupCache.get(from).data;else{groupMeta=await sock.groupMetadata(from);groupCache.set(from,{data:groupMeta,time:Date.now()})}const bId=jidNormalizedUser(sock.user.id),sId=jidNormalizedUser(sender);for(let p of groupMeta.participants){if(!p.admin)continue;const pid=jidNormalizedUser(p.id);if(pid===bId)isBotAdmin=true;if(pid===sId)isAdmin=true}if(isCreator)isAdmin=true}catch{}}
+  if(isGroup){try{if(groupCache.has(from)&&Date.now()-groupCache.get(from).time<60000)groupMeta=groupCache.get(from).data;else{groupMeta=await sock.groupMetadata(from);groupCache.set(from,{data:groupMeta,time:Date.now()})}const bId=jidNormalizedUser(sock.user.id),sId=sender;for(let p of groupMeta.participants){if(!p.admin)continue;const pid=jidNormalizedUser(p.id);if(pid===bId)isBotAdmin=true;if(pid===sId)isAdmin=true}if(isCreator)isAdmin=true}catch{}}
   const reply=async(t)=>{try{await sock.sendMessage(from,{text:`◈┈▉ \`ｃｒａｓｈｅｒ ｍｄ\` ▉┄◈\n> ${t}\n\n> ⚡ ᴘᴏᴡᴇʀ • ꜱᴘᴇᴇᴅ • ᴄᴏɴᴛʀᴏʟ`},{quoted:m});await sock.sendMessage(from,{react:{text:'💀',key:m.key}})}catch{}}
   const ownerOnly=()=>reply('ᴏᴡɴᴇʀ ᴏɴʟʏ'); const adminOnly=()=>reply('ᴀᴅᴍɪɴ ᴏɴʟʏ'); const botAdmin=()=>reply('ʙᴏᴛ ɴᴏᴛ ᴀᴅᴍɪɴ')
-  const getTarget=()=>{let j=m.message.extendedTextMessage?.contextInfo?.participant; if(j) return j; if(args[0]) return args[0].replace(/[^0-9]/g,'')+'@s.whatsapp.net'; return null}
+  const getTarget=()=>{let j=m.message.extendedTextMessage?.contextInfo?.participant; if(j) return jidNormalizedUser(j); if(args[0]) return jidNormalizedUser(args[0].replace(/[^0-9]/g,'')+'@s.whatsapp.net'); return null}
 
-  // MENU
-  if(command==='menu'||command==='help'){
-    let txt=`╭────↯\n│ OWNER: CRASHER\n│ PREFIX: ${config.prefix}\n│ CMDS: 150\n│ MODE: ${global.db.settings.mode}\n│ RUNTIME: ${runtime(process.uptime())}\n╰────↯\n\nOWNER\n╭─◈\n┆ .menu .ping .alive .owner .runtime .botinfo .restart .shutdown .broadcast .setprefix .setname .setbio .setpp .join .leave .block .unblock .ban .unban .listban .clearsession\n╰─◈\nAUTO\n╭─◈\n┆ .autoread .autotyping .autoonline .autorecording .autoreact .autoreply .autosticker .autoview .autobio .autolikestatus\n╰─◈\nANTI\n╭─◈\n┆ .antilink .antibot .antispam .antiflood .antitag .antidelete .antibadword .antisticker .antifake .antipromote .anticall\n╰─◈\nMODERATOR\n╭─◈\n┆ .kick .add .promote .demote .warn .warnings .resetwarn .mute .unmute .delete .kickall\n╰─◈\nGROUP\n╭─◈\n┆ .groupinfo .grouplink .setnamegc .setdesc .open .close .tagall .hidetag .listmembers .admins .revoke .invite\n╰─◈\nVV\n╭─◈\n┆ .vv .vv2\n╰─◈\nDOWNLOADER\n╭─◈\n┆ .play .song .video .tiktok .instagram .facebook .mediafire .apk .pinterest .github .gdrive .twitter .threads\n╰─◈\nTOOLS\n╭─◈\n┆ .weather .translate .calculate .shorturl .qr .qrcode .removebg .hd .toaudio .tourl .getpp .whois\n╰─◈\nSETTINGS\n╭─◈\n┆ .public .private .setmode .getsettings\n╰─◈\nSTICKER\n╭─◈\n┆ .sticker .s .toimg .take .attp .attp2 .emojimix .smeme .brat\n╰─◈\nFUN\n╭─◈\n┆ .joke .quote .meme .truth .dare .fact .8ball .ship .rate .waste\n╰─◈`
-    return reply(txt)
-  }
+    // MENU - NEW CRASHER STYLE WITH PFP
+  if(command==='menu'||command==='help'||command==='list'){
+    let totalCmds = 250
+    let uptime = runtime(process.uptime())
+    let mode = config.mode || global.db.settings.mode
+    let txt = `◈┈▉ \`ｃｒａｓｈｅｒ ｍｄ\` ▉┄◈
+> *THE ULTIMATE WHATSAPP BOT*
+
+╭─⬡ *BOT INFO* ⬡─
+│ ◦ *Owner:* ${config.ownerName}
+│ ◦ *Bot:* ${config.botName}
+│ ◦ *Prefix:* [ ${config.prefix} ]
+│ ◦ *Mode:* ${mode.toUpperCase()}
+│ ◦ *Cmds:* ${totalCmds}+
+│ ◦ *Uptime:* ${uptime}
+│ ◦ *Platform:* ${process.platform}
+╰──────────⬡
+
+╭─⬡ *OWNER MENU* ⬡─
+│ ◦ ${config.prefix}menu | ${config.prefix}ping | ${config.prefix}alive
+│ ◦ ${config.prefix}owner | ${config.prefix}runtime | ${config.prefix}botinfo
+│ ◦ ${config.prefix}restart | ${config.prefix}shutdown
+│ ◦ ${config.prefix}broadcast | ${config.prefix}setprefix
+│ ◦ ${config.prefix}setname | ${config.prefix}setbio | ${config.prefix}setpp
+│ ◦ ${config.prefix}join | ${config.prefix}leave
+│ ◦ ${config.prefix}block | ${config.prefix}unblock
+│ ◦ ${config.prefix}ban | ${config.prefix}unban | ${config.prefix}listban
+│ ◦ ${config.prefix}clearsession
+╰──────────⬡
+
+╭─⬡ *AUTO MENU* ⬡─
+│ ◦ ${config.prefix}autoread | ${config.prefix}autotyping
+│ ◦ ${config.prefix}autoonline | ${config.prefix}autorecording
+│ ◦ ${config.prefix}autoreact | ${config.prefix}autoreply
+│ ◦ ${config.prefix}autosticker | ${config.prefix}autoview
+│ ◦ ${config.prefix}autobio | ${config.prefix}autolikestatus
+╰──────────⬡
+
+╭─⬡ *ANTI MENU* ⬡─
+│ ◦ ${config.prefix}antilink | ${config.prefix}antibot
+│ ◦ ${config.prefix}antispam | ${config.prefix}antiflood
+│ ◦ ${config.prefix}antitag | ${config.prefix}antidelete
+│ ◦ ${config.prefix}antibadword | ${config.prefix}antisticker
+│ ◦ ${config.prefix}antifake | ${config.prefix}antipromote
+│ ◦ ${config.prefix}anticall
+╰──────────⬡
+
+╭─⬡ *GROUP MENU* ⬡─
+│ ◦ ${config.prefix}groupinfo | ${config.prefix}grouplink
+│ ◦ ${config.prefix}setnamegc | ${config.prefix}setdesc
+│ ◦ ${config.prefix}open | ${config.prefix}close
+│ ◦ ${config.prefix}tagall | ${config.prefix}hidetag
+│ ◦ ${config.prefix}kick | ${config.prefix}add
+│ ◦ ${config.prefix}promote | ${config.prefix}demote
+│ ◦ ${config.prefix}warn | ${config.prefix}warnings | ${config.prefix}resetwarn
+│ ◦ ${config.prefix}mute | ${config.prefix}unmute
+│ ◦ ${config.prefix}delete | ${config.prefix}kickall
+│ ◦ ${config.prefix}listmembers | ${config.prefix}admins | ${config.prefix}revoke
+╰──────────⬡
+
+╭─⬡ *DOWNLOADER* ⬡─
+│ ◦ ${config.prefix}play | ${config.prefix}song | ${config.prefix}video
+│ ◦ ${config.prefix}tiktok | ${config.prefix}instagram
+│ ◦ ${config.prefix}facebook | ${config.prefix}mediafire
+│ ◦ ${config.prefix}apk | ${config.prefix}pinterest
+│ ◦ ${config.prefix}twitter | ${config.prefix}threads
+╰──────────⬡
+
+╭─⬡ *TOOLS & FUN* ⬡─
+│ ◦ ${config.prefix}sticker | ${config.prefix}s | ${config.prefix}toimg
+│ ◦ ${config.prefix}weather | ${config.prefix}translate
+│ ◦ ${config.prefix}calculate | ${config.prefix}shorturl
+│ ◦ ${config.prefix}vv | ${config.prefix}vv2 | ${config.prefix}tourl
+│ ◦ ${config.prefix}joke | ${config.prefix}quote | ${config.prefix}meme
+│ ◦ ${config.prefix}truth | ${config.prefix}dare
+╰──────────⬡
+
+> ⚡ ᴘᴏᴡᴇʀ • ꜱᴘᴇᴇᴅ • ᴄᴏɴᴛʀᴏʟ - CRASHER MD`
+
+    try {
+      let pfpBuffer = await getBuffer("https://files.catbox.moe/hhafg3.jpg")
+      await sock.sendMessage(from, { image: pfpBuffer, caption: txt }, { quoted: m })
+      await sock.sendMessage(from, { react: { text: '💀', key: m.key } })
+    } catch {
+      // fallback to text if image fails
+      return reply(txt)
+    }
+    return
+        }
 
   switch(command){
     // OWNER 20
