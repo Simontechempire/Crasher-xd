@@ -18,6 +18,9 @@ function fancy(t){const m={a:'ᴀ',b:'ʙ',c:'ᴄ',d:'ᴅ',e:'ᴇ',f:'ғ',g:'ɢ',
 function runtime(s){s=Number(s);let d=Math.floor(s/86400),h=Math.floor(s%86400/3600),mm=Math.floor(s%3600/60),ss=Math.floor(s%60);return `${d}d ${h}h ${mm}m ${ss}s`}
 async function getBuffer(u){let r=await axios.get(u,{responseType:'arraybuffer'});return Buffer.from(r.data)}
 
+// SET YOUR PFP HERE
+config.pfp = config.pfp || "https://files.catbox.moe/hhafg3.jpg"
+
 global.db = global.db || { auto:{autoread:false,autotyping:false,autoonline:true,autorecording:false,autoreact:true,autoreply:false,autosticker:false,autoview:true,autobio:false,autolikestatus:true}, antilink:{}, antibot:{}, antispam:{}, antiflood:{}, antitag:{}, antidelete:{}, antibad:{}, antisticker:{}, antifake:{}, antipromote:{}, anticall:{}, warnings:{}, users:{}, chat:{}, settings:{mode:config.mode||'public',prefix:config.prefix||'.'} }
 
 app.use(express.static(path.join(__dirname, 'public')))
@@ -39,7 +42,7 @@ async function startCrasher(){
   sock.ev.on('creds.update', saveCreds)
   sock.ev.on('connection.update', async(u)=>{
     const {connection,lastDisconnect}=u
-    if(connection==='open'){isConnecting=false;console.log(chalk.green('CONNECTED'));try{let b=await getBuffer(config.pfp);await sock.updateProfilePicture(sock.user.id,b).catch(()=>{})}catch{};await sock.sendMessage(jidNormalizedUser(config.owner[0]+'@s.whatsapp.net'),{text:`◈┈▉ \`ｃｒａｓｈｅｒ ｍｄ\` ▉┄◈\n> Connected\n> Prefix: ${config.prefix}\n> Mode: ${config.mode}`}).catch(()=>{})}
+    if(connection==='open'){isConnecting=false;console.log(chalk.green('CONNECTED'));try{let b=await getBuffer(config.pfp);await sock.updateProfilePicture(sock.user.id,b).catch(()=>{})}catch{};await sock.sendMessage(jidNormalizedUser(config.owner[0]+'@s.whatsapp.net'),{text:`◈┈▉ \`ｃｒａｓｈｅｒ ｍｄ\` ▉┄◈\n> Connected\n> Prefix: ${config.prefix}\n> Mode: ${config.mode}\n\n> ⚡ ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴄʀᴀꜱʜᴇʀ xᴅ`}).catch(()=>{})}
     if(connection==='close'){isConnecting=false;const code=lastDisconnect?.error instanceof Boom?lastDisconnect.error.output?.statusCode:0;if(code!==DisconnectReason.loggedOut){await delay(3000);startCrasher()}}
   })
   sock.ev.on('messages.upsert', async({messages,type})=>{
@@ -53,7 +56,6 @@ async function handleMessage(m){
   const body=(m.message.conversation||m.message.extendedTextMessage?.text||m.message.imageMessage?.caption||m.message.videoMessage?.caption||'').trim(); 
   if(!body) return
   
-  // === FIXED OWNER CHECK - SUPPORTS LID & NORMAL ===
   const rawSender = m.key.participant || from
   const sender = jidNormalizedUser(rawSender)
   const senderNum = sender.split('@')[0].replace(/[^0-9]/g,'').replace(/:.*/, '')
@@ -68,7 +70,6 @@ async function handleMessage(m){
   if(global.db.auto.autoreact){try{await sock.sendMessage(from,{react:{text:['💀','🔥','🐺','⚡'][Math.floor(Math.random()*4)],key:m.key}})}catch{}}
   if(from.includes('status')&&global.db.auto.autoview){await sock.readMessages([m.key]).catch(()=>{});if(global.db.auto.autolikestatus)try{await sock.sendMessage(from,{react:{text:'🔥',key:m.key}},{statusJidList:[sender]})}catch{}}
   
-  // ANTI
   if(isGroup){
     if(global.db.antilink[from]&&body.match(/https:\/\/chat.whatsapp.com|wa.me|t.me|https:\/\/wa.me/)){
       try{let meta=await sock.groupMetadata(from);let admin=!!meta.participants.find(p=>jidNormalizedUser(p.id)===sender)?.admin;let botAdmin=!!meta.participants.find(p=>jidNormalizedUser(p.id)===jidNormalizedUser(sock.user.id))?.admin;if(!admin&&botAdmin&&!isCreator){await sock.sendMessage(from,{delete:m.key}).catch(()=>{});await sock.groupParticipantsUpdate(from,[rawSender],'remove').catch(()=>{})}}catch{}
@@ -76,10 +77,9 @@ async function handleMessage(m){
     if(global.db.antibot[from]&&m.key.id.startsWith('BAE5')){try{await sock.sendMessage(from,{delete:m.key}).catch(()=>{});}catch{}}
   }
 
-  if(!body.startsWith(config.prefix)) { if(global.db.auto.autoreply&&!isGroup) await sock.sendMessage(from,{text:`Hey! I am CRASHER MD\nType ${config.prefix}menu`},{quoted:m}).catch(()=>{}); return }
+  if(!body.startsWith(config.prefix)) { if(global.db.auto.autoreply&&!isGroup) await sock.sendMessage(from,{text:`Hey! I am CRASHER MD\nType ${config.prefix}menu\n\n> ⚡ ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴄʀᴀꜱʜᴇʀ xᴅ`},{quoted:m}).catch(()=>{}); return }
   const args=body.slice(config.prefix.length).trim().split(/ +/); const command=args.shift().toLowerCase(); const q=args.join(' ')
   
-  // === FIXED PRIVATE MODE - NOW USES config.mode ===
   const currentMode = config.mode || global.db.settings.mode
   if(currentMode === 'private' && !isCreator) return
   if(currentMode === 'self' && !isCreator) return
@@ -87,7 +87,10 @@ async function handleMessage(m){
   try{await sock.sendMessage(from,{react:{text:'⏳',key:m.key}})}catch{}
   let groupMeta,isAdmin=false,isBotAdmin=false
   if(isGroup){try{if(groupCache.has(from)&&Date.now()-groupCache.get(from).time<60000)groupMeta=groupCache.get(from).data;else{groupMeta=await sock.groupMetadata(from);groupCache.set(from,{data:groupMeta,time:Date.now()})}const bId=jidNormalizedUser(sock.user.id),sId=sender;for(let p of groupMeta.participants){if(!p.admin)continue;const pid=jidNormalizedUser(p.id);if(pid===bId)isBotAdmin=true;if(pid===sId)isAdmin=true}if(isCreator)isAdmin=true}catch{}}
-  const reply=async(t)=>{try{await sock.sendMessage(from,{text:`◈┈▉ \`ｃｒａｓｈｅｒ ｍｄ\` ▉┄◈\n> ${t}\n\n> ⚡ ᴘᴏᴡᴇʀ • ꜱᴘᴇᴇᴅ • ᴄᴏɴᴛʀᴏʟ`},{quoted:m});await sock.sendMessage(from,{react:{text:'💀',key:m.key}})}catch{}}
+  
+  // === THIS IS WHERE POWER BY CRASHER XD APPEARS EVERYWHERE ===
+  const reply=async(t)=>{try{await sock.sendMessage(from,{text:`◈┈▉ \`ｃｒａｓｈｅｒ ｍｄ\` ▉┄◈\n> ${t}\n\n> ⚡ ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴄʀᴀꜱʜᴇʀ xᴅ\n> ⚡ ᴘᴏᴡᴇʀ • ꜱᴘᴇᴇᴅ • ᴄᴏɴᴛʀᴏʟ`},{quoted:m});await sock.sendMessage(from,{react:{text:'💀',key:m.key}})}catch{}}
+  
   const ownerOnly=()=>reply('ᴏᴡɴᴇʀ ᴏɴʟʏ'); const adminOnly=()=>reply('ᴀᴅᴍɪɴ ᴏɴʟʏ'); const botAdmin=()=>reply('ʙᴏᴛ ɴᴏᴛ ᴀᴅᴍɪɴ')
   const getTarget=()=>{let j=m.message.extendedTextMessage?.contextInfo?.participant; if(j) return jidNormalizedUser(j); if(args[0]) return jidNormalizedUser(args[0].replace(/[^0-9]/g,'')+'@s.whatsapp.net'); return null}
 
