@@ -6,26 +6,26 @@
 
 module.exports = {
   // === OWNER CONFIG ===
-  owner: ["2348071569915"], // main owner
-  sudo: ["2348071569915"], // extra sudo users
+  owner: ["2348071569915"], 
+  sudo: ["2348071569915"],
   ownerName: "ᴄʀᴀꜱʜᴇʀ",
   ownerNumber: "2348071569915@s.whatsapp.net",
   
   // === BOT CONFIG ===
   botName: "ᴄʀᴀꜱʜᴇʀ ᴍᴅ",
-  botNumber: "", // will auto fill after pair
+  botNumber: "", 
   prefix: ".",
-  mode: "public", // public / private
+  mode: "private", // <--- CHANGED TO PRIVATE FOR SAFETY - only you can use bot
   language: "en",
   
   // === SESSION & HOSTING ===
   sessionFolder: "./session",
   port: process.env.PORT || 3000,
-  pairingMethod: "code", // code / qr
+  pairingMethod: "code",
   
   // === BOT PROFILE ===
   pfp: "https://files.catbox.moe/hhafg3.jpg",
-  botBio: "⚡ CRASHER MD - Power • Speed • Control - 150 CMD",
+  botBio: "⚡ CRASHER MD - Power • Speed • Control - 250 CMD",
   
   // === AUTO FUNCTION DEFAULT ===
   auto: {
@@ -62,13 +62,13 @@ module.exports = {
     admin: "◈ *ADMIN ONLY* ◈\n> You must be admin!",
     botAdmin: "◈ *BOT ADMIN* ◈\n> Bot must be admin!",
     group: "◈ *GROUP ONLY* ◈\n> This cmd for group only!",
-    private: "◈ *PRIVATE MODE* ◈\n> Bot is in private mode!",
+    private: "◈ *PRIVATE MODE* ◈\n> Bot is in private mode! Only owner 2348071569915",
     wait: "⏳ *WAIT... CRASHER IS PROCESSING* ⏳",
     done: "💀 *DONE* 💀",
     error: "❌ Error! Try again later"
   },
 
-  // === API KEYS (Optional) ===
+  // === API KEYS ===
   apis: {
     openai: "",
     removeBg: "",
@@ -81,4 +81,4 @@ module.exports = {
     whatsapp: "https://whatsapp.com/channel/crasher",
     supportGroup: "https://chat.whatsapp.com/xxxxx"
   }
-    }
+}
