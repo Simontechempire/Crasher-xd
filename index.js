@@ -81,8 +81,8 @@ async function handleMessage(m){
   
   if(isGroup){
     try{
-      let meta = groupCache.has(from)&&Date.now()-groupCache.get(from).time<60000 ? groupCache.get(from).data : await sock.groupMetadata(from);
-      if(!groupCache.has(from)) groupCache.set(from,{data:meta,[STRIPPED]
+      let meta = groupCache.has(from) ? groupCache.get(from).data : await sock.groupMetadata(from);
+      if(!groupCache.has(from)) groupCache.set(from,{data:meta})
       const botJids = jidsOf(sock.user.id, sock.user.lid);
       const botNum = numOf(sock.user.id) || numOf(sock.user.lid);
       const meAdmin = checkAdmin(meta.participants, senderJids, senderNum);
@@ -115,8 +115,8 @@ async function handleMessage(m){
   try{await sock.sendMessage(from,{react:{text:'⏳',key:m.key}})}catch{}
   let groupMeta,isAdmin=false,isBotAdmin=false
   if(isGroup){try{
-    if(groupCache.has(from)&&Date.now()-groupCache.get(from).time<60000) groupMeta=groupCache.get(from).data;
-    else{ groupMeta=await sock.groupMetadata(from); groupCache.set(from,{data:groupMeta,[STRIPPED]
+    if(groupCache.has(from)) groupMeta=groupCache.get(from).data;
+    else{ groupMeta=await sock.groupMetadata(from); groupCache.set(from,{data:groupMeta}) }
     const botJids2=jidsOf(sock.user.id,sock.user.lid);
     const botNum2=numOf(sock.user.id)||numOf(sock.user.lid);
     isAdmin=checkAdmin(groupMeta.participants,senderJids,senderNum);
@@ -127,6 +127,9 @@ async function handleMessage(m){
   // === THIS IS WHERE POWER BY CRASHER XD APPEARS EVERYWHERE ===
   const reply=async(t)=>{try{await sock.sendMessage(from,{text:`◈┈▉ \`ｃｒａｓｈｅｒ ｍｄ\` ▉┄◈\n> ${t}\n\n> ⚡ ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴄʀᴀꜱʜᴇʀ xᴅ\n> ⚡ ᴘᴏᴡᴇʀ • ꜱᴘᴇᴇᴅ • ᴄᴏɴᴛʀᴏʟ`},{quoted:m});await sock.sendMessage(from,{react:{text:'💀',key:m.key}})}catch{}}
   
+  const ownerOnly=()=>reply('ᴏᴡɴᴇʀ ᴏɴʟʏ'); const adminOnly=()=>reply('ᴀᴅᴍɪɴ ᴏɴʟʏ'); const botAdmin=()=>reply('ʙᴏᴛ ɴᴏᴛ ᴀᴅᴍɪɴ'); const groupOnly=()=>reply('ɢʀᴏᴜᴘ ᴏɴʟʏ')
+  const getTarget=()=>{let j=ctxAll.participant; if(j) return jidNormalizedUser(j); if(mentioned[0]) return jidNormalizedUser(mentioned[0]); if(args[0]) return jidNormalizedUser(args[0].replace(/[^0-9]/g,'')+'@s.whatsapp.net'); return null}
+  const getTargetRaw=()=>{ if(ctxAll.participant) return ctxAll.participant; if(mentioned[0]) return mentioned[0]; return getTarget() }
   const ownerOnly=()=>reply('ᴏᴡɴᴇʀ ᴏɴʟʏ'); const adminOnly=()=>reply('ᴀᴅᴍɪɴ ᴏɴʟʏ'); const botAdmin=()=>reply('ʙᴏᴛ ɴᴏᴛ ᴀᴅᴍɪɴ'); const groupOnly=()=>reply('ɢʀᴏᴜᴘ ᴏɴʟʏ')
   const getTarget=()=>{let j=ctxAll.participant; if(j) return jidNormalizedUser(j); if(mentioned[0]) return jidNormalizedUser(mentioned[0]); if(args[0]) return jidNormalizedUser(args[0].replace(/[^0-9]/g,'')+'@s.whatsapp.net'); return null}
   const getTargetRaw=()=>{ if(ctxAll.participant) return ctxAll.participant; if(mentioned[0]) return mentioned[0]; return getTarget() }
