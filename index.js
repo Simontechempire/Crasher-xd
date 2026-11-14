@@ -127,13 +127,9 @@ async function handleMessage(m){
   // === THIS IS WHERE POWER BY CRASHER XD APPEARS EVERYWHERE ===
   const reply=async(t)=>{try{await sock.sendMessage(from,{text:`◈┈▉ \`ｃｒａｓｈｅｒ ｍｄ\` ▉┄◈\n> ${t}\n\n> ⚡ ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴄʀᴀꜱʜᴇʀ xᴅ\n> ⚡ ᴘᴏᴡᴇʀ • ꜱᴘᴇᴇᴅ • ᴄᴏɴᴛʀᴏʟ`},{quoted:m});await sock.sendMessage(from,{react:{text:'💀',key:m.key}})}catch{}}
   
-  const ownerOnly=()=>reply('ᴏᴡɴᴇʀ ᴏɴʟʏ'); const adminOnly=()=>reply('ᴀᴅᴍɪɴ ᴏɴʟʏ'); const botAdmin=()=>reply('ʙᴏᴛ ɴᴏᴛ ᴀᴅᴍɪɴ'); const groupOnly=()=>reply('ɢʀᴏᴜᴘ ᴏɴʟʏ')
+    const ownerOnly=()=>reply('ᴏᴡɴᴇʀ ᴏɴʟʏ'); const adminOnly=()=>reply('ᴀᴅᴍɪɴ ᴏɴʟʏ'); const botAdmin=()=>reply('ʙᴏᴛ ɴᴏᴛ ᴀᴅᴍɪɴ'); const groupOnly=()=>reply('ɢʀᴏᴜᴘ ᴏɴʟʏ')
   const getTarget=()=>{let j=ctxAll.participant; if(j) return jidNormalizedUser(j); if(mentioned[0]) return jidNormalizedUser(mentioned[0]); if(args[0]) return jidNormalizedUser(args[0].replace(/[^0-9]/g,'')+'@s.whatsapp.net'); return null}
   const getTargetRaw=()=>{ if(ctxAll.participant) return ctxAll.participant; if(mentioned[0]) return mentioned[0]; return getTarget() }
-  const ownerOnly=()=>reply('ᴏᴡɴᴇʀ ᴏɴʟʏ'); const adminOnly=()=>reply('ᴀᴅᴍɪɴ ᴏɴʟʏ'); const botAdmin=()=>reply('ʙᴏᴛ ɴᴏᴛ ᴀᴅᴍɪɴ'); const groupOnly=()=>reply('ɢʀᴏᴜᴘ ᴏɴʟʏ')
-  const getTarget=()=>{let j=ctxAll.participant; if(j) return jidNormalizedUser(j); if(mentioned[0]) return jidNormalizedUser(mentioned[0]); if(args[0]) return jidNormalizedUser(args[0].replace(/[^0-9]/g,'')+'@s.whatsapp.net'); return null}
-  const getTargetRaw=()=>{ if(ctxAll.participant) return ctxAll.participant; if(mentioned[0]) return mentioned[0]; return getTarget() }
-
     // MENU - NEW CRASHER STYLE WITH PFP
   if(command==='menu'||command==='help'||command==='list'){
     let totalCmds = 250
